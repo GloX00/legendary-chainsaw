@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мини-игра с поздравлением</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background: black url('https://www.transparenttextures.com/patterns/stardust.png');
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #game-container { position: absolute; width: 100%; height: 100%; display: none; }
+        .player, .heart { width: 50px; height: 50px; position: absolute; }
+        .player { background: blue; left: 50%; bottom: 10%; transform: translateX(-50%); }
+        .heart { 
+            background: url('https://cdn-icons-png.flaticon.com/512/833/833472.png') no-repeat center/cover; 
+            left: 50%; 
+            top: 10%; 
+            transform: translateX(-50%);
+        }
+
+        #message { display: none; font-size: 3vw; color: red; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #congrats-container, #birthday-container, #intro-container {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+        }
+
+        #intro-container { top: 10%; display: block; }
+        #congrats-container { top: 20%; }
+        #birthday-container { top: 50%; transform: translate(-50%, -50%); }
+
+        h1 { font-size: 4vw; }
+        p { font-size: 3vw; }
+
+        button {
+            padding: 1vw 3vw;
+            font-size: 3vw;
+            cursor: pointer;
+            background-color: blue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #congrats-container h1 { color: green; }
+        #birthday-container h1 { color: red; }
+        #birthday-container p { color: #D64D4D; }
+
+        .bear {
+            position: absolute;
+            width: 5vw;
+            height: 5vw;
+            background: url('https://cdn.pixabay.com/photo/2017/08/30/12/32/teddy-2690951_960_720.png') no-repeat center/cover;
+            animation: bounce 1.5s ease-in-out infinite;
+        }
+
+        .bear-left { left: 10vw; top: 50%; transform: translateY(-50%); }
+        .bear-right { right: 10vw; top: 50%; transform: translateY(-50%); }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        #joystick-container {
+            position: absolute;
+            bottom: 5vw;
+            left: 5vw;
+            width: 15vw;
+            height: 15vw;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #joystick-inner {
+            width: 8vw;
+            height: 8vw;
+            border: 2px solid white;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            position: relative;
+            cursor: pointer;
+        }
+
+        #joystick-inner.active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        #wish-container {
+            font-size: 2.5vw;
+            color: #FFD700;
+            opacity: 0;
+            transition: opacity 0.5s;
+            min-height: 4vw;
+        }
+
+        /* Стили для летающих сердечек */
+        .flying-heart {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            background: url('https://cdn-icons-png.flaticon.com/512/833/833472.png') no-repeat center/contain;
+            top: 100vh;
+            animation: floatUp 10s linear forwards;
+            z-index: 0; /* чтобы сердечки были фоном */
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-110vh);
+                opacity: 0;
+            }
+        }
+
+        @media (min-width: 768px) {
+            h1 { font-size: 3vw; }
+            p { font-size: 2vw; }
+            button { font-size: 2.5vw; }
+            #birthday-container h1 { font-size: 2.5vw; }
+            #birthday-container p { font-size: 2vw; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Вступительный экран -->
+    <div id="intro-container">
+        <h1>🎉 С Днём Рождения! 🎉</h1>
+        <p>Чтобы пройти дальше, пройди мини-игру!</p>
+        <button id="start-button">Продолжить</button>
+    </div>
+
+    <!-- Экран поздравления -->
+    <div id="congrats-container">
+        <h1>УРААА! Ты прошла дальше!</h1>
+        <p>У тебя всегда всё получается! 💪</p>
+        <button id="continue-button">Продолжить</button>
+    </div>
+
+    <!-- Экран поздравления с Днём Рождения -->
+    <div id="birthday-container">
+        <h1>🎉 С Днём Рождения! 🎉</h1>
+        <div id="wish-container"></div>
+        <div class="bear bear-left"></div>
+        <div class="bear bear-right"></div>
+    </div>
+
+    <!-- Игровой экран -->
+    <div id="game-container">
+        <div class="player" id="player"></div>
+        <div class="heart" id="heart"></div>
+    </div>
+
+    <p id="message">🎉 С Днём Рождения! 💖💖💖</p>
+
+    <!-- Джойстик -->
+    <div id="joystick-container">
+        <div id="joystick-inner"></div>
+    </div>
+
+    <script>
+        let player = document.getElementById("player");
+        let heart = document.getElementById("heart");
+        let message = document.getElementById("message");
+        let gameContainer = document.getElementById("game-container");
+        let introContainer = document.getElementById("intro-container");
+        let startButton = document.getElementById("start-button");
+        let congratsContainer = document.getElementById("congrats-container");
+        let continueButton = document.getElementById("continue-button");
+        let birthdayContainer = document.getElementById("birthday-container");
+        let joystickContainer = document.getElementById("joystick-container");
+        let joystick = document.getElementById("joystick-inner");
+        let wishContainer = document.getElementById("wish-container");
+
+        let positionX = window.innerWidth / 2 - 5;
+        let positionY = window.innerHeight - 10;
+        let heartCaught = false;
+        let velocity = 5;
+        let playerSpeedX = 0;
+        let playerSpeedY = 0;
+
+        startButton.addEventListener("click", function() {
+            introContainer.style.display = "none";
+            gameContainer.style.display = "block";
+            joystickContainer.style.display = "flex";
+            gameLoop();
+        });
+
+        function movePlayer() {
+            if (heartCaught) return;
+            positionX += playerSpeedX;
+            positionY += playerSpeedY;
+            positionX = Math.max(0, Math.min(window.innerWidth - 50, positionX));
+            positionY = Math.max(0, Math.min(window.innerHeight - 50, positionY));
+            player.style.left = positionX + "px";
+            player.style.top = positionY + "px";
+        }
+
+        function moveHeart() {
+            if (heartCaught) return;
+            let maxX = window.innerWidth - 50;
+            let maxY = window.innerHeight - 50;
+            let randomX = Math.floor(Math.random() * maxX);
+            let randomY = Math.floor(Math.random() * maxY);
+            heart.style.left = randomX + "px";
+            heart.style.top = randomY + "px";
+        }
+
+        function checkCollision() {
+            if (heartCaught) return;
+            let playerRect = player.getBoundingClientRect();
+            let heartRect = heart.getBoundingClientRect();
+            if (
+                playerRect.left < heartRect.right &&
+                playerRect.right > heartRect.left &&
+                playerRect.top < heartRect.bottom &&
+                playerRect.bottom > heartRect.top
+            ) {
+                heartCaught = true;
+                gameContainer.style.display = "none";
+                joystickContainer.style.display = "none";
+                congratsContainer.style.display = "block";
+            }
+        }
+
+        setInterval(moveHeart, 1000);
+
+        function gameLoop() {
+            movePlayer();
+            checkCollision();
+            if (!heartCaught) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        continueButton.addEventListener("click", function() {
+            congratsContainer.style.display = "none";
+            birthdayContainer.style.display = "block";
+            showSequentialWishes();
+        });
+
+        const wishTexts = [
+            "С Днём Рождения! Пусть сбудется всё, о чём ты мечтаешь! 🎉",
+            "Желаю счастья, удачи и много вдохновения! 🌟",
+            "Смело иди к своей цели, и пусть путь будет лёгким! 💪",
+            "Пусть каждый день будет полон радости и вдохновения! 🌈",
+            "Ты - уникальна, и этот день принадлежит тебе! 💖",
+            "Пусть твоя жизнь будет наполнена яркими моментами и счастьем! 🎈",
+            "С Днём Рождения! Пусть сбудутся все твои мечты! 🎁",
+            "Пусть этот день будет самым лучшим в твоей жизни! 🎂",
+            "Счастья, здоровья и море позитива! 🌊",
+            "Пусть твоя жизнь будет наполнена радостью и счастьем! 🌺",
+            "Пусть этот день запомнится на всю жизнь! 🎊",
+            "Ты можешь всё! 🌟",
+            "Ты заслуживаешь самого лучшего! 🌟",
+            "Ты невероятная! 💖"
+        ];
+
+        let wishIndex = 0;
+
+        function showSequentialWishes() {
+            wishContainer.style.opacity = 0;
+
+            setTimeout(() => {
+                wishContainer.textContent = wishTexts[wishIndex];
+                wishContainer.style.opacity = 1;
+                wishIndex++;
+                if (wishIndex >= wishTexts.length) wishIndex = 0;
+
+                setTimeout(showSequentialWishes, 2500);
+            }, 500);
+        }
+
+        let joystickActive = false;
+
+        joystick.addEventListener("touchstart", function(e) {
+            joystickActive = true;
+            joystick.classList.add("active");
+            updateJoystickPosition(e);
+        });
+
+        joystick.addEventListener("touchmove", function(e) {
+            if (joystickActive) updateJoystickPosition(e);
+        });
+
+        joystick.addEventListener("touchend", function() {
+            joystickActive = false;
+            joystick.classList.remove("active");
+            playerSpeedX = 0;
+            playerSpeedY = 0;
+        });
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "ArrowUp") playerSpeedY = -velocity;
+            if (e.key === "ArrowDown") playerSpeedY = velocity;
+            if (e.key === "ArrowLeft") playerSpeedX = -velocity;
+            if (e.key === "ArrowRight") playerSpeedX = velocity;
+        });
+
+        function updateJoystickPosition(e) {
+            const touch = e.touches[0];
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const dx = touch.clientX - centerX;
+            const dy = touch.clientY - centerY;
+            const angle = Math.atan2(dy, dx);
+
+            playerSpeedX = Math.cos(angle) * velocity;
+            playerSpeedY = Math.sin(angle) * velocity;
+
+            joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+        }
+
+        // Функция для создания летящих сердечек
+        function createFlyingHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('flying-heart');
+            heart.style.left = Math.random() * 100 + 'vw';
+            document.body.appendChild(heart);
+
+            setTimeout(() => {
+                heart.remove();
+            }, 10000);
+        }
+
+        // Запуск летающих сердечек только при отображении birthdayContainer
+        const observer = new MutationObserver(() => {
+            if (birthdayContainer.style.display === "block") {
+                setInterval(createFlyingHeart, 500);
+                observer.disconnect(); // чтобы не дублировалось
+            }
+        });
+
+        observer.observe(birthdayContainer, { attributes: true, attributeFilter: ['style'] });
+    </script>
+    <!-- Другие элементы страницы -->
+
+    <!-- Элемент для фона музыки -->
+    <audio id="background-music" loop>
+        <source src="music/The Cat Empire Positive Music - The Lost Song (Саундтрек к сериалу Кухня) (getmus.me).mp3" type="audio/mpeg">
+        Ваш браузер не поддерживает тег audio.
+    </audio>
+    
+    <script>
+        // Автозапуск музыки при первом взаимодействии с сайтом
+        document.body.addEventListener('click', function() {
+            var music = document.getElementById('background-music');
+            music.play(); // запускает воспроизведение
+        });
+    </script>
+    
+</body>
+</html>
